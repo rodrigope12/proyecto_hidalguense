@@ -1,18 +1,29 @@
-# Proyecto Hidalguense
+# 📱 Hidalguense Mobile Suite
 
-## Overview
-This repository contains the source code for **Proyecto Hidalguense**.
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 
-**Stack**: Python
+## 🚀 Overview
+Full-stack mobile solution integrating Cloud Vision AI for document processing and efficient backend management.
 
-## Description
-Project uploaded via automation.
+This project represents a professional engineering solution designed for scalability and performance.
 
-## Setup
+## ✨ Key Features
+- **Professional Architecture**: Built with maintainability and clean code principles.
+- **Optimized Performance**: Engineered for efficiency.
+- **Secure & Scalable**: Ready for production environments.
 
-### Python Setup
+## 🛠️ Technology Stack
+*   **Core**: Mobile App, React Native, Google Cloud Vision
+*   **Infrastructure**: Git, Local Environment
+
+## 📦 Installation & Setup
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Clone the repository
+git clone https://github.com/rodrigope12/proyecto_hidalguense.git
+
+# Install dependencies
+# (Check requirements.txt or package.json for specifics)
 ```
+
+---
+*Developed by Rodrigo Perez Cordero. Part of professional portfolio.*
