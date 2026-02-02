@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a2744">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="El Hidalguense">
+
+  <title>El Hidalguense - Logística</title>
+  <meta name="description" content="Sistema de logística para distribuidora de quesos artesanales El Hidalguense">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-512.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/static/css/styles.css">
+
+  <!-- Google Maps -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCdNnu2yLNV4AC8-9hEw9BEHBr59M1-b28&callback=initMap"></script>
+
+  <style>
+    /* El Hidalguense Brand Styles */
+    .logo-text h1 {
+      font-family: 'Cinzel', serif;
+      color: #c4a052;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+    }
+
+    .text-gradient {
+      background: linear-gradient(135deg, #c4a052 0%, #d4b76a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Server config modal */
+    .server-config {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .server-config-card {
+      background: var(--bg-card);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .server-config-card img {
+      width: 100px;
+      height: 100px;
+      border-radius: 16px;
+      margin-bottom: 1rem;
+    }
+  </style>
+  <script>
+    // Capture install prompt early
+    window.deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPrompt = e;
+      console.log('✅ App lista para instalar');
+      // Show install button
+      setTimeout(() => {
+        const btn = document.getElementById('installAppBtn');
+        if (btn) btn.style.display = 'flex';
+      }, 1000);
+    });
+  </script>
+</head>
+
+<body>
+  <!-- Server Configuration Modal (shown on first launch) -->
+  <div class="server-config" id="serverConfig" style="display: none;">
+    <div class="server-config-card">
+      <img src="/static/icons/icon-192.png" alt="El Hidalguense">
+      <h2 class="brand-title text-gradient">El Hidalguense</h2>
+      <p style="color: var(--text-secondary); margin: 1rem 0;">Configura la IP del servidor (tu Mac)</p>
+      <form onsubmit="saveServerConfig(event)">
+        <div class="form-group">
+          <input type="text" class="form-input" id="serverIp" placeholder="Ej: 10.10.1.17" value="10.10.1.17">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">
+          Conectar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toasts"></div>
+
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <button class="btn btn-icon menu-toggle" onclick="toggleSidebar()">
+      <span>☰</span>
+    </button>
+    <h3 class="brand-title text-gradient">El Hidalguense <small style="font-size: 0.6em; color: white;">v5.0</small>
+    </h3>
+
+    <!-- Manual Install Button -->
+    <button id="installAppBtn" onclick="installPWA()"
+      style="display: none; background: #c4a052; border: none; padding: 5px 10px; border-radius: 20px; color: #0d1520; font-weight: bold; font-size: 12px; margin-left: 10px; align-items: center; gap: 5px;">
+      ⬇ Instalar
+    </button>
+
+    <div style="flex: 1;"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <img src="/static/icons/icon-72.png" alt="Logo" style="width: 48px; height: 48px; border-radius: 10px;">
+          <div class="logo-text">
+            <h1>El Hidalguense</h1>
+            <span style="color: var(--text-muted);">Queso Oaxaca Artesanal</span>
+          </div>
+        </div>
+
+        <!-- Date Picker -->
+        <div class="date-picker">
+          <input type="date" id="routeDate" onchange="loadOrders()">
+          <button class="btn btn-icon btn-outline" onclick="setToday()" title="Hoy">
+            📅
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" data-tab="deliveries" onclick="switchTab('deliveries')">
+            Entregas
+          </button>
+          <button class="tab" data-tab="clients" onclick="switchTab('clients')">
+            Clientes
+          </button>
+          <button class="tab" data-tab="summary" onclick="switchTab('summary')">
+            Resumen
+          </button>
+        </div>
+
+        <!-- Deliveries Tab -->
+        <div class="tab-content" id="tab-deliveries">
+          <!-- Stats -->
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" id="totalDeliveries">0</div>
+              <div class="stat-label">Entregas</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="totalDistance">0</div>
+              <div class="stat-label">km</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="totalTime">0</div>
+              <div class="stat-label">min</div>
+            </div>
+          </div>
+
+          <!-- Optimize Button -->
+          <button class="btn btn-primary btn-large btn-block" id="optimizeBtn" onclick="optimizeRoute()">
+            <span>🎯</span>
+            Optimizar Ruta
+          </button>
+
+          <!-- Delivery List -->
+          <div class="card" style="margin-top: 1rem;">
+            <div class="card-header">
+              <span class="card-title">Paradas del Día</span>
+              <span class="badge badge-primary" id="deliveryCount">0</span>
+            </div>
+            <div class="delivery-list" id="deliveryList">
+              <div class="empty-state">
+                <div class="empty-icon">🧀</div>
+                <p>Selecciona una fecha para ver las entregas</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clients Tab -->
+        <div class="tab-content" id="tab-clients" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Alta Rápida de Cliente</span>
+            </div>
+            <form id="newClientForm" onsubmit="createClient(event)">
+              <div class="form-group">
+                <label class="form-label">Nombre del Negocio</label>
+                <input type="text" class="form-input" name="nombre_negocio" placeholder="Ej: Cremería La Esperanza"
+                  required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                <input type="tel" class="form-input" name="telefono" placeholder="5551234567" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Latitud</label>
+                  <input type="number" class="form-input" name="latitud" step="any" placeholder="20.1234" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Longitud</label>
+                  <input type="number" class="form-input" name="longitud" step="any" placeholder="-99.5678" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Zona</label>
+                <input type="text" class="form-input" name="zona" placeholder="Centro">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Producto</label>
+                  <select class="form-input" name="producto">
+                    <option value="Queso Oaxaca">Queso Oaxaca</option>
+                    <option value="Queso Panela">Queso Panela</option>
+                    <option value="Crema">Crema</option>
+                    <option value="Requesón">Requesón</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Precio Especial</label>
+                  <input type="number" class="form-input" name="precio_pactado" step="0.01" placeholder="95.00">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-success btn-block">
+                <span>✓</span>
+                Guardar Cliente
+              </button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">📍 Ubicación Actual</span>
+              <button class="btn btn-outline btn-icon" onclick="getCurrentLocation()">
+                🎯
+              </button>
+            </div>
+            <p style="font-size: 0.875rem; color: var(--text-muted);">
+              Toca el ícono para capturar la ubicación actual.
+            </p>
+          </div>
+        </div>
+
+        <!-- Summary Tab -->
+        <div class="tab-content" id="tab-summary" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Compras Semanales</span>
+            </div>
+            <div id="weeklySummary">
+              <div class="loading">
+                <div class="spinner"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Map Area -->
+    <main class="main-content">
+      <div class="map-container">
+        <div id="map"></div>
+
+        <!-- Map Overlay Controls -->
+        <div class="map-overlay">
+          <div class="map-controls">
+            <button class="btn btn-outline" onclick="centerOnRoute()">
+              <span>🗺️</span>
+              Ver Ruta
+            </button>
+          </div>
+          <div class="map-controls">
+            <button class="btn btn-success" id="startNavBtn" onclick="startNavigation()" style="display: none;">
+              <span>▶️</span>
+              Iniciar
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Panel (Uber-style) -->
+        <div class="nav-panel" id="navPanel">
+          <div class="nav-destination">
+            <div class="nav-title">PRÓXIMA ENTREGA</div>
+            <div class="nav-name" id="navDestName">Cargando...</div>
+            <div class="nav-details">
+              <span id="navProduct">🧀 Queso Oaxaca</span>
+              <span id="navKg">⚖️ 5 kg</span>
+            </div>
+          </div>
+          <div class="nav-buttons">
+            <button class="btn btn-primary btn-large" onclick="navigateToNext()">
+              <span>🧭</span>
+              Navegar
+            </button>
+            <button class="btn btn-success btn-large" onclick="showDeliveryModal()">
+              <span>✓</span>
+              Entregar
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Delivery Modal -->
+  <div class="modal-overlay" id="deliveryModal" style="display: none;">
+    <div class="modal">
+      <h3 class="brand-title">Confirmar Entrega</h3>
+      <form id="deliveryForm" onsubmit="completeDelivery(event)">
+        <input type="hidden" name="order_id" id="deliveryOrderId">
+        <div class="form-group">
+          <label class="form-label">Kilogramos Reales (Báscula)</label>
+          <input type="number" class="form-input" name="kg_reales" step="0.01" required autofocus>
+        </div>
+        <div class="nav-buttons">
+          <button type="button" class="btn btn-outline" onclick="hideDeliveryModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .modal h3 {
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+  </style>
+
+
+
+
+
+  <!-- html2canvas -->
+  <script src="/static/js/html2canvas.min.js"></script>
+
+  <!-- Receipt Template (Hidden) -->
+  <div id="receipt-container"
+    style="position: fixed; top: -9999px; left: -9999px; width: 800px; height: 600px; font-family: 'Cinzel', serif;">
+    <div class="receipt-box"
+      style="width: 100%; height: 100%; position: relative; background: url('/static/img/receipt_bg.jpg') no-repeat center center; background-size: cover; color: #d4b76a;">
+
+      <!-- Dynamic Content Overlay -->
+      <div style="position: absolute; top: 32%; left: 16%; font-size: 18px; font-weight: bold;" id="receipt-remision">
+        001</div>
+      <div style="position: absolute; top: 32%; left: 65%; font-size: 18px; font-weight: bold;" id="receipt-fecha">
+        12/01/2026</div>
+
+      <div
+        style="position: absolute; top: 38%; left: 16%; font-size: 18px; font-weight: bold; width: 75%; overflow: hidden;"
+        id="receipt-cliente">Cremería La Esperanza</div>
+      <div style="position: absolute; top: 43%; left: 18%; font-size: 16px; width: 75%; overflow: hidden;"
+        id="receipt-direccion">Av. Principal #123, Centro</div>
+
+      <!-- Products Table Area (approx starting at 55%) -->
+      <div
+        style="position: absolute; top: 56%; left: 10%; width: 80%; height: 25%; display: flex; flex-direction: column; gap: 10px; font-family: 'Inter', sans-serif; color: #fff; font-size: 16px;">
+        <!-- Single Row for now (user usually delivers 1 product type per stops mostly, or we list them) -->
+        <div style="display: flex; width: 100%; align-items: center;">
+          <div style="width: 15%; text-align: center;" id="receipt-cant">5.0</div>
+          <div style="width: 40%; padding-left: 10px;" id="receipt-producto">Queso Oaxaca</div>
+          <div style="width: 20%; text-align: right;" id="receipt-precio">$120.00</div>
+          <div style="width: 25%; text-align: right;" id="receipt-total-row">$600.00</div>
+        </div>
+      </div>
+
+      <div
+        style="position: absolute; top: 83%; left: 78%; transform: translateX(-50%); font-size: 20px; font-weight: bold; color: #fff;"
+        id="receipt-subtotal">$600.00</div>
+      <div
+        style="position: absolute; top: 88%; left: 78%; transform: translateX(-50%); font-size: 20px; font-weight: bold; color: #fff;"
+        id="receipt-total-final">$600.00</div>
+
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        // Register at root scope
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => console.log('✓ Service Worker registrado en root scope'))
+          .catch((err) => console.log('Service Worker error:', err));
+      });
+    }
+
+    // Check for server config on first launch
+    window.addEventListener('load', () => {
+      const savedServer = localStorage.getItem('serverIp');
+      if (!savedServer) {
+        document.getElementById('serverConfig').style.display = 'flex';
+      }
+    });
+
+    function saveServerConfig(e) {
+      e.preventDefault();
+      const ip = document.getElementById('serverIp').value;
+      localStorage.setItem('serverIp', ip);
+      document.getElementById('serverConfig').style.display = 'none';
+      showToast('Servidor configurado: ' + ip, 'success');
+      // Reload to apply new API base
+      window.location.reload();
+    }
+  </script>
+</body>
+
+<!-- DEBUG PANEL -->
+<div id="debug-btn" onclick="toggleDebug()"
+  style="position: fixed; bottom: 10px; right: 10px; width: 40px; height: 40px; background: rgba(255,0,0,0.5); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 9999; font-size: 20px; cursor: pointer;">
+  🐞
+</div>
+
+<div id="debug-overlay"
+  style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; padding: 20px; overflow-y: auto; font-family: monospace; color: #00ff00;">
+  <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+    <h3 style="margin: 0;">Diagnóstico del Sistema</h3>
+    <div>
+      <button onclick="copyLogs()"
+        style="padding: 8px 16px; background: blue; color: white; border: none; margin-right: 10px;">COPIAR
+        LOGS</button>
+      <button onclick="toggleDebug()"
+        style="padding: 8px 16px; background: #333; color: white; border: none;">CERRAR</button>
+    </div>
+  </div>
+  <div id="debug-logs" style="white-space: pre-wrap; word-break: break-all; font-size: 12px;"></div>
+</div>
+
+<script>
+  function log(msg, type = 'INFO') {
+    const el = document.getElementById('debug-logs');
+    const time = new Date().toLocaleTimeString();
+    const line = `[${time}] [${type}] ${msg}`;
+    console.log(line);
+    if (el) el.innerHTML += line + '\n';
+  }
+
+  function toggleDebug() {
+    const el = document.getElementById('debug-overlay');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') runDiagnostics();
+  }
+
+  function copyLogs() {
+    const text = document.getElementById('debug-logs').innerText;
+    navigator.clipboard.writeText(text).then(() => alert('Logs copiados al portapapeles'));
+  }
+
+  log('Sistema de logs iniciado. Abre el panel para ver diagnóstico.');
+
+  // Enhanced Diagnostics
+  async function runDiagnostics() {
+    const el = document.getElementById('debug-logs');
+    el.innerHTML = ''; // Clear
+
+    log('--- SISTEMA & ENTORNO ---');
+    log(`User Agent: ${navigator.userAgent}`);
+    log(`URL: ${window.location.href}`);
+    log(`Protocolo: ${window.location.protocol}`);
+    log(`Secure Context: ${window.isSecureContext ? '✅ SÍ' : '❌ NO'}`);
+    log(`Viewport: ${window.innerWidth}x${window.innerHeight}`);
+    log(`Pantalla: ${screen.width}x${screen.height}`);
+    log(`Orientación: ${screen.orientation ? screen.orientation.type : 'N/A'}`);
+    log(`Referrer: ${document.referrer || '(directo)'}`);
+
+    log('\n--- MODOS DE VISUALIZACIÓN ---');
+    const modes = ['standalone', 'fullscreen', 'minimal-ui', 'browser'];
+    modes.forEach(mode => {
+      const match = window.matchMedia(`(display-mode: ${mode})`).matches;
+      log(`display-mode: ${mode} => ${match ? '✅ ACTIVO' : 'inactivo'}`);
+    });
+    log(`navigator.standalone (iOS): ${window.navigator.standalone}`);
+
+    log('\n--- VERIFICACIÓN MANIFEST ---');
+    try {
+      const r = await fetch(`/manifest.json?t=${Date.now()}`);
+      log(`Status: ${r.status} ${r.statusText}`);
+      log(`Type: ${r.headers.get('content-type')}`);
+
+      if (r.ok) {
+        const json = await r.json();
+        log(`📂 name: "${json.name}"`);
+        log(`📂 short_name: "${json.short_name}"`);
+        log(`📂 display: "${json.display}"`);
+        log(`📂 start_url: "${json.start_url}"`);
+        log(`📂 scope: "${json.scope}"`);
+
+        // Icon checks
+        if (json.icons && json.icons.length) {
+          log(`📂 Iconos definidos: ${json.icons.length}`);
+          // Check first and last icon
+          const iconToCheck = json.icons[json.icons.length - 1]; // Largest usually
+          log(`🔍 Verificando icono (${iconToCheck.sizes}): ${iconToCheck.src}`);
+          try {
+            const iconResp = await fetch(iconToCheck.src);
+            log(`   ➜ Status Icono: ${iconResp.status} ${iconResp.ok ? '✅ OK' : '❌ ERROR'}`);
+          } catch (err) {
+            log(`   ➜ Error descargando icono: ${err}`, 'ERROR');
+          }
+        } else {
+          log('⚠️ NO se encontraron iconos en el manifest', 'WARN');
+        }
+      } else {
+        log('❌ Error descargando manifest', 'ERROR');
+      }
+    } catch (e) {
+      log(`❌ Excepción verificando manifest: ${e}`, 'ERROR');
+    }
+
+    log('\n--- SERVICE WORKER ---');
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          log(`✅ Registrado. Scope: ${reg.scope}`);
+          log(`   Estado: ${reg.active ? 'Active' : (reg.waiting ? 'Waiting' : 'Installing')}`);
+        } else {
+          log('⚠️ No hay Service Worker registrado activamente', 'WARN');
+        }
+      } catch (e) {
+        log(`Error consultando SW: ${e}`, 'ERROR');
+      }
+    } else {
+      log('❌ API ServiceWorker no soportada', 'ERROR');
+    }
+
+    log('\n--- INSTALABILIDAD (beforeinstallprompt) ---');
+    if (window.deferredPrompt) {
+      log('✅ deferredPrompt capturado (La app es instalable)');
+      log('   Plataformas: ' + JSON.stringify(window.deferredPrompt.platforms || []));
+    } else {
+      log('ℹ️ deferredPrompt es NULL. Posibles causas:');
+      log('   1. Ya está instalada');
+      log('   2. No cumple criterios PWA');
+      log('   3. El evento aun no se ha disparado');
+    }
+  }
+
+  // Capture install prompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // e.preventDefault();
+    log('EVENTO: beforeinstallprompt disparado', 'SUCCESS');
+    log('Plataformas: ' + JSON.stringify(e.platforms));
+  });
+
+  window.addEventListener('appinstalled', () => {
+    log('EVENTO: Aplicación instalada correctamente', 'SUCCESS');
+  });
+
+  log('Sistema de logs iniciado. Abre el panel para ver diagnóstico.');
+</script>
+</body>
+
+</html>
